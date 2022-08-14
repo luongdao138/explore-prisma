@@ -5,8 +5,10 @@ import styled from 'styled-components';
 import PokemonItem from '../../components/PokemonItem';
 import useBoolean from '../../hooks/useBoolean';
 import { v4 as uuidv4 } from 'uuid';
+import getRandomColor from '../../helpers/randomColor';
 
 const MAP_SIZE = 4;
+const TIMEOUT = 1000;
 
 interface StylesProps {
   size: number;
@@ -16,6 +18,7 @@ interface MapItem {
   id: string;
   pokemonId: number;
   isRevealed: boolean;
+  matchColor: string;
 }
 
 const PokemonContent = styled('div')`
@@ -62,15 +65,19 @@ const PokemonPage = () => {
     if (releavedPokemons.length === 2) {
       if (releavedPokemons[0].pokemonId === releavedPokemons[1].pokemonId) {
         setMatches((prev) => [...prev, releavedPokemons[0].pokemonId]);
+      } else {
+        setTimeout(() => {
+          setPokemonMap((prev) =>
+            prev.map((i) =>
+              i.id === releavedPokemons[0].id || i.id === releavedPokemons[1].id
+                ? { ...i, isRevealed: false }
+                : i
+            )
+          );
+        }, TIMEOUT);
       }
     }
   }, [pokemonMap, matches]);
-
-  const closePokemonCard = (id: string) => {
-    setPokemonMap((prev) =>
-      prev.map((i) => (i.id === id ? { ...i, isRevealed: false } : i))
-    );
-  };
 
   useEffect(() => {
     if (firstRenderRef.current) {
@@ -78,24 +85,22 @@ const PokemonPage = () => {
       return;
     }
     // create a random array
-    const pokemonIds = new Set<number>();
+    const pokemonIds = new Set<{ randomId: number; matchColor: string }>();
 
     while (pokemonIds.size < Math.pow(MAP_SIZE, 2) / 2) {
       const randomId = Math.ceil(Math.random() * 100);
-      pokemonIds.add(randomId);
+      pokemonIds.add({ randomId, matchColor: getRandomColor() });
     }
 
-    const items: number[] = [
-      ...Array.from(pokemonIds),
-      ...Array.from(pokemonIds),
-    ];
+    const items = [...Array.from(pokemonIds), ...Array.from(pokemonIds)];
 
     console.log({ items });
     setPokemonMap(
       _.shuffle(items).map((i) => ({
         id: uuidv4(),
-        pokemonId: i,
+        pokemonId: i.randomId,
         isRevealed: false,
+        matchColor: i.matchColor,
       }))
     );
   }, []);
@@ -111,7 +116,7 @@ const PokemonPage = () => {
             handleSelectPokemon={handleSelectPokemon}
             id={mapItem.id}
             isMatch={matches.includes(mapItem.pokemonId)}
-            closePokemonCard={closePokemonCard}
+            matchColor={mapItem.matchColor}
           />
         ))}
       </PokemonContent>
